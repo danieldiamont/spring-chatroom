@@ -5,13 +5,23 @@ const stompClient = new Client(
 {
     brokerURL: 'ws://localhost:8080/chatroom-ws',
     onConnect: () => {
-        stompClient.subscribe('/topic/chatroom', (message) => {
-            console.log('Received: ' + message.body);
+        stompClient.subscribe('/topic/chatroom', (res) => {
+            console.log('Received: ' + res.body);
+
+            let parsedMessage = JSON.parse(res.body);
+            if (parsedMessage?.messages != null) {
+                let chatMessages = document.getElementById('chat-messages');
+                chatMessages.innerHTML = '';
+
+                for (let msg of parsedMessage.messages) {
+                    chatMessages.innerHTML += '<p>' + msg + '</p>';
+                }
+            }
         });
         stompClient.publish(
             {
                 destination: '/app/message',
-                body: JSON.stringify({ 'message': 'BANG' }),
+                body: JSON.stringify({ 'message': 'a new user has joined the chat!' }),
             }
         );
     },

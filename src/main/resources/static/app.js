@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 const stompClient = new Client(
 {
@@ -9,30 +10,59 @@ const stompClient = new Client(
             console.log('Received: ' + res.body);
 
             let parsedMessage = JSON.parse(res.body);
-            if (parsedMessage?.messages != null) {
-                let chatMessages = document.getElementById('chat-messages');
-                chatMessages.innerHTML = '';
-
-                for (let msg of parsedMessage.messages) {
-                    chatMessages.innerHTML += '<p>' + msg + '</p>';
+            if (parsedMessage?.type != null) {
+                if (parsedMessage.type === 'STATUS') {
+                    let activeUsers = document.getElementById('chat-active-users');
+                    activeUsers.innerHTML = 'Active Users: ' + parsedMessage.activeConnections;
+                }
+                else if (parsedMessage.type === 'MESSAGES') {
+                    let chatMessages = document.getElementById('chat-messages');
+                    chatMessages.innerHTML = '';
+                    if (parsedMessage?.messages != null) {
+                        for (let msg of parsedMessage.messages) {
+                            chatMessages.innerHTML += '<p>' + msg + '</p>';
+                        }
+                    }
                 }
             }
         });
+        /*
         stompClient.publish(
             {
                 destination: '/app/message',
                 body: JSON.stringify({ 'message': 'a new user has joined the chat!' }),
             }
         );
+        */
     },
 });
 
 stompClient.onWebSocketError = function (error) {
     console.log('Websocket Error: ' + JSON.stringify(error));
+    disconnect();
+    reconnect();
 }
 
 stompClient.onStompError = function (frame) {
     console.log('Stomp Error: ' + JSON.stringify(frame));
+    disconnect();
+    reconnect();
+}
+
+function reconnect() {
+    let attempts = 0;
+    let isConnected = false;
+    while (attempts < MAX_RECONNECT_ATTEMPTS && !isConnected) {
+        setTimeout(() => {
+            console.log('Reconnect Attempt: ' + attempts);
+            stompClient.activate();
+        }, 1000);
+        isConnected = stompClient.connected;
+        attempts++;
+    }
+    if (!isConnected) {
+        console.log('Failed to reconnect');
+    }
 }
 
 
@@ -42,7 +72,9 @@ function connect(event) {
     connectBtn.disabled = true;
     let disconnectBtn = document.getElementById('disconnect-btn');
     disconnectBtn.disabled = false;
-    event.preventDefault();
+    if (event != null) {
+        event.preventDefault();
+    }
 }
 
 function disconnect(event) {
@@ -51,7 +83,9 @@ function disconnect(event) {
     connectBtn.disabled = false;
     let disconnectBtn = document.getElementById('disconnect-btn');
     disconnectBtn.disabled = true;
-    event.preventDefault();
+    if (event != null) {
+        event.preventDefault();
+    }
 }
 
 function sendMessage(event) {
@@ -61,7 +95,9 @@ function sendMessage(event) {
         console.log('Message Sent');
 
     }
-    event.preventDefault();
+    if (event != null) {
+        event.preventDefault();
+    }
 }
 
 

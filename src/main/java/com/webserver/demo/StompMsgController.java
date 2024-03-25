@@ -9,14 +9,26 @@ import java.util.ArrayList;
 @Controller
 public class StompMsgController {
 
-    private ArrayList<String> messages = new ArrayList<String>();
     private int messageLimit = 10;
+    private MessageList messageList = new MessageList();
 
     @MessageMapping("/message")
     @SendTo("/topic/chatroom")
-    public MessageList testMessage(ChatMessage message) throws Exception {
+    public ServerState updateChatroom(ChatMessage message) throws Exception {
 
-        messages.add(HtmlUtils.htmlEscape(message.getMessage()));
+        ArrayList<String> limitedMessages = prepareMessages(message);
+
+        ServerState serverStateView = new ServerState(
+                ServerStateType.MESSAGES,
+                WebSocketsEventsListener.activeConnections,
+                limitedMessages
+        );
+        return serverStateView;
+    }
+
+    private ArrayList<String> prepareMessages(ChatMessage message) {
+        messageList.addMessage(HtmlUtils.htmlEscape(message.getMessage()));
+        ArrayList<String> messages = messageList.getMessages();
 
         ArrayList<String> limitedMessages = new ArrayList<String>();
         if (messages.size() > messageLimit) {
@@ -26,6 +38,11 @@ public class StompMsgController {
         } else {
             limitedMessages = messages;
         }
-        return new MessageList(limitedMessages);
+        return limitedMessages;
     }
+
+    // TODO - Add way to add messages to a database
+    // TODO - Add way to retrieve messages from a database
+    //
+    // TODO - Use an in-memory database to store messages instead of ArrayList
 }
